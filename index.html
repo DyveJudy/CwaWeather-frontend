@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>森森天氣</title>
+    <title>天氣</title>
     <link rel="icon" type="image/png" href="./icon-v2.png">
     <link rel="apple-touch-icon" href="./icon-v2.png">
     <link rel="apple-touch-icon" sizes="180x180" href="./icon-v2.png">
@@ -274,14 +274,16 @@
         </div>
 
         <h3 class="section-title">稍後預報</h3>
-        <div class="scroll-container" id="futureForecasts">
+        <div class="scroll-container" id="ftureForecasts">
         </div>
 
     </div>
 
     <script>
-        const API_URL = "https://cwa-backend-api.zeabur.app/api/weather/kaohsiung";
-
+        const API_BASE_URL = "https://cwaweather-test.zeabur.app/api/weather";
+        const DEFAULT_CITY = "臺北市"; // 設定預設要載入的城市
+        
+        // ✨✨✨ 修正開始 ✨✨✨
         function getWeatherIcon(weather) {
             if (!weather) return "🌤️";
             if (weather.includes("晴")) return "☀️";
@@ -291,6 +293,7 @@
             if (weather.includes("雷")) return "⛈️";
             return "🌤️";
         }
+        // ✨✨✨ 修正結束 ✨✨✨
 
         function getAdvice(rainProb, maxTemp) {
             let rainIcon = "🌂";
@@ -326,11 +329,13 @@
             const forecasts = data.forecasts;
             const current = forecasts[0];
             const others = forecasts.slice(1);
+            document.querySelector('.location-pill').textContent = `📍 ${data.city}`;
 
             // 1. 渲染 Hero Card (主畫面)
             const advice = getAdvice(current.rain, current.maxTemp);
             const period = getTimePeriod(current.startTime);
             const avgTemp = Math.round((parseInt(current.maxTemp) + parseInt(current.minTemp)) / 2);
+           
 
             document.getElementById('heroCard').innerHTML = `
                         <div class="hero-card">
@@ -392,7 +397,10 @@
             document.getElementById('updateTime').textContent = `${month}月${date}日 ${days[dayIndex]}`;
         }
 
-        async function fetchWeather() {
+        async function fetchWeather(city) {
+             // **修正點 1：動態建構 API 網址**
+             const API_URL = `${API_BASE_URL}/${city}`;
+        
             try {
                 // 1. 定義「最低等待時間」：1500 毫秒 (1.5秒)
                 const delayPromise = new Promise(resolve => setTimeout(resolve, 1500));
@@ -409,17 +417,23 @@
 
                     // 資料處理好後，隱藏 Loading，顯示主畫面
                     document.getElementById('loading').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                } else {
-                    throw new Error("API Error");
+                    document.getElementById('mainContent').style.display = 'block';          
+                } else {
+                 // 如果 API 回傳 success: false，也視為錯誤，拋出到 catch 區塊
+                 throw new Error(json.message || "API 回傳錯誤");
                 }
             } catch (e) {
                 console.error(e);
-                alert("天氣資料讀取失敗，狸克把網路線咬斷了！");
+                // 隱藏 Loading，但顯示錯誤畫面或警告
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block'; // 確保頁面顯示
+                document.getElementById('heroCard').innerHTML = `<h3 style="color:red; text-align:center; padding: 50px;">❌ 天氣資料讀取失敗，請檢查 API 伺服器狀態！</h3>`;
+                // 彈出警告，方便除錯
+                alert(`❌ ${city} 資料讀取失敗，錯誤：${e.message || "未知錯誤"}`);
             }
         }
 
-        document.addEventListener("DOMContentLoaded", fetchWeather);
+        document.addEventListener("DOMContentLoaded", () => fetchWeather(DEFAULT_CITY));
     </script>
 </body>
 
