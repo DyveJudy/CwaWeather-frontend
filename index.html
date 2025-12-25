@@ -25,8 +25,10 @@
   <div id="result">請按「取得天氣」或更改城市後再按。</div>
 
   <script>
-    // ✅ 修正：API_BASE_URL 只到主機，不包含 /api/weather 路徑
-    const API_BASE_URL = "https://cwaweather-test.zeabur.app"; // ← 不要在這裡加 /api/weather
+    // ✅ 修正要點：
+    // 1) API_BASE_URL 只留到主機（不要包含 /api/weather）
+    // 2) 在呼叫時組出完整路徑，並用 encodeURIComponent(city) 處理中文或特殊字元
+    const API_BASE_URL = "https://cwaweather-test.zeabur.app"; // ← 只到主機根
     const DEFAULT_CITY = "臺北市";
 
     const cityInput = document.getElementById("cityInput");
@@ -34,7 +36,7 @@
     const resultDiv = document.getElementById("result");
 
     async function fetchWeather(city) {
-      // ✅ 在呼叫時組出完整路徑，並使用 encodeURIComponent 處理中文或特殊字元
+      // 在呼叫時組成最終 URL（避免重複 /api/weather）
       const API_URL = `${API_BASE_URL}/api/weather/${encodeURIComponent(city)}`;
 
       resultDiv.textContent = `正在取得 ${city} 的天氣資料...\n請求: ${API_URL}`;
@@ -42,21 +44,19 @@
       try {
         const resp = await fetch(API_URL, { method: "GET" });
         if (!resp.ok) {
-          // 處理非 2xx 回應
           const text = await resp.text().catch(() => "");
           resultDiv.innerHTML = `<div class="error">伺服器回傳錯誤：${resp.status} ${resp.statusText}\n${text}</div>`;
           return;
         }
 
         const data = await resp.json();
-        // 範例：顯示回傳 JSON（根據你後端回傳格式，可改成更友善的呈現）
+        // 顯示 JSON（需要更友善呈現時再調整）
         resultDiv.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
         resultDiv.innerHTML = `<div class="error">網路或其他錯誤：${err.message || err}</div>`;
       }
     }
 
-    // 綁定按鈕
     fetchBtn.addEventListener("click", () => {
       const city = (cityInput.value || DEFAULT_CITY).trim();
       if (!city) {
@@ -66,7 +66,6 @@
       fetchWeather(city);
     });
 
-    // 頁面載入時自動抓一次預設城市
     window.addEventListener("load", () => {
       cityInput.value = DEFAULT_CITY;
       fetchWeather(DEFAULT_CITY);
